@@ -39,6 +39,18 @@ var bot = new botbuilder.UniversalBot(connector, function(session){
                 .address(message.address)
                 .text('Bienvenue ' + membersAdded));
         }
+
+        if (message.membersRemoved && message.membersRemoved.length > 0) {
+            var membersRemoved = message.membersRemoved
+                .map(function(x) {
+                    var isSelf = x.id === message.address.bot.id;
+                    return (isSelf ? message.address.bot.name : x.name) || '' + ' (Id = ' + x.id + ')';
+                }).join(', ');
+    
+            bot.send(new botbuilder.Message()
+                .address(message.address)
+                .text(membersRemoved + 'a quitté la conversation'));
+        }
     });
 
 
