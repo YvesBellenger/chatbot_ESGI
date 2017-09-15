@@ -23,17 +23,15 @@ var bot = new botbuilder.UniversalBot(connector, function(session){
     session.send('You have tapped: %s | [length: %s]', session.message.text, session.message.text.length);
 
     bot.on('typing', function(){
-        session.send("......................");
-    }, 3000);
-
+        session.send("need some help ?");
+    });
     
-
     bot.on('conversationUpdate', function(message){
         if(message.membersAdded && message.membersAdded.length > 0){
             var membersAdded = message.membersAdded
                 .map(function(x){
                     var isSelf = x.id == message.address.bot.id;
-                    return (isSelf ? message.adress.bot.name : x.name) || '' + '(Id = ' + x.id / ')'
+                    return (isSelf ? message.adress.bot.name : x.name) || '' + ' (Id: ' + x.id + ')';
                 }).join(', ');
             bot.send(new botbuilder.Message()
                 .address(message.address)
@@ -44,14 +42,35 @@ var bot = new botbuilder.UniversalBot(connector, function(session){
             var membersRemoved = message.membersRemoved
                 .map(function(x) {
                     var isSelf = x.id === message.address.bot.id;
-                    return (isSelf ? message.address.bot.name : x.name) || '' + ' (Id = ' + x.id + ')';
+                    return (isSelf ? message.address.bot.name : x.name) || '' + ' (Id: ' + x.id + ')';
                 }).join(', ');
     
             bot.send(new botbuilder.Message()
                 .address(message.address)
                 .text(membersRemoved + 'a quitté la conversation'));
         }
+        
     });
+
+    bot.dialog('adhocDialog', function(session, args) {
+        var savedAddress = session.message.address;
+    
+        // (Save this information somewhere that it can be accessed later, such as in a database, or session.userData)
+        session.userData.savedAddress = savedAddress;
+    
+        var message = 'Hello user, good to meet you! I now know your address and can send you notifications in the future.';
+        session.send(message);
+    })
+
+    // Ask the user for their name and greet them by name.
+    //bot.dialog('greetings', [
+    //    function (session) {
+    //        botbuilder.Prompts.text(session, 'Hi! What is your name?');
+    //    },
+    //    function (session, results) {
+    //        session.endDialog(`Hello ${results.response}!`);
+    //    }
+    //]);
 
 
     //session.send(JSON.stringify(session.dialogData));
