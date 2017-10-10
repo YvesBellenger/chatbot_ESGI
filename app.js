@@ -1,80 +1,88 @@
 var restify = require('restify');
 var botbuilder = require('botbuilder');
 
-
-// setup restify server
+// Setup restify
 
 var server = restify.createServer();
 server.listen(process.env.port || process.env.PORT || 3978, function(){
     console.log('%s bot started at %s', server.name, server.url);
 });
 
-// create chat connector
+// Setup connector
 var connector = new botbuilder.ChatConnector({
-    appId: process.env.APP_ID,
-    appPassword: process.env.APP_SECRET
+   appId: process.env.APP_ID,
+   appPassword: process.env.APP_PASSWORD
 });
 
-// listening for user inputs
 server.post('/api/messages', connector.listen());
 
-// reply by enchoing
-var bot = new botbuilder.UniversalBot(connector, function(session){
-    session.send('You have tapped: %s | [length: %s]', session.message.text, session.message.text.length);
-
-    bot.on('typing', function(){
-        session.send("need some help ?");
-    });
+var bot = new botbuilder.UniversalBot(connector, [
     
-    bot.on('conversationUpdate', function(message){
-        if(message.membersAdded && message.membersAdded.length > 0){
-            var membersAdded = message.membersAdded
-                .map(function(x){
-                    var isSelf = x.id == message.address.bot.id;
-                    return (isSelf ? message.adress.bot.name : x.name) || '' + ' (Id: ' + x.id + ')';
-                }).join(', ');
-            bot.send(new botbuilder.Message()
-                .address(message.address)
-                .text('Bienvenue ' + membersAdded));
+    function(session){
+        session.beginDialog('greetings'); 
+    },
+    function (session) {       
+        session.beginDialog('reservation', session.dialogData.reservation);
+    },
+    function (session, results) {
+        session.dialogData.reservation = results.response;
+        session.send(`Reservation enregistrée. <br/> Voici les détails: <br/>Date/Heure: ${session.dialogData.reservation.date} <br/>Nombre de personnes: ${session.dialogData.reservation.size} <br/>Nom: ${session.dialogData.reservation.name}`);
+    }
+    
+]);
+
+bot.dialog('greetings', [
+    function(session){
+        session.beginDialog('askname');
+    },
+    function (session, results){
+        session.endDialog('Hello %s!', results.response);
+    }
+]);
+
+bot.dialog('askname', [
+    function(session){
+        botbuilder.Prompts.text(session, 'Hi! What is your name?');
+    },
+    function (session, results){
+        session.endDialogWithResult(results);
+    }
+]);
+
+bot.dialog('reservation', [
+
+    function (session, args, next) {
+        session.dialogData.reservation = args || {}; 
+        if (!session.dialogData.reservation.date) {
+            botbuilder.Prompts.text(session, "Veuillez renseigner la date de votre réservation (ex: 6 octobre à 18h)");
+        } else {
+            next();
         }
-
-        if (message.membersRemoved && message.membersRemoved.length > 0) {
-            var membersRemoved = message.membersRemoved
-                .map(function(x) {
-                    var isSelf = x.id === message.address.bot.id;
-                    return (isSelf ? message.address.bot.name : x.name) || '' + ' (Id: ' + x.id + ')';
-                }).join(', ');
-    
-            bot.send(new botbuilder.Message()
-                .address(message.address)
-                .text(membersRemoved + 'a quitté la conversation'));
+    },
+    function (session, results, next) {
+        if (results.response) {
+            session.dialogData.reservation.date = results.response;
         }
-        
-    });
-
-    bot.dialog('adhocDialog', function(session, args) {
-        var savedAddress = session.message.address;
-    
-        // (Save this information somewhere that it can be accessed later, such as in a database, or session.userData)
-        session.userData.savedAddress = savedAddress;
-    
-        var message = 'Hello user, good to meet you! I now know your address and can send you notifications in the future.';
-        session.send(message);
-    })
-
-    // Ask the user for their name and greet them by name.
-    //bot.dialog('greetings', [
-    //    function (session) {
-    //        botbuilder.Prompts.text(session, 'Hi! What is your name?');
-    //    },
-    //    function (session, results) {
-    //        session.endDialog(`Hello ${results.response}!`);
-    //    }
-    //]);
-
-
-    //session.send(JSON.stringify(session.dialogData));
-    //session.send(JSON.stringify(session.sessionState));
-    //session.send(JSON.stringify(session.conversationData));
-    //session.send(JSON.stringify(session.userData));
-});
+        if (!session.dialogData.reservation.size) {
+            botbuilder.Prompts.text(session, "Combien de personne y aura t il ?");
+        } else {
+            next();
+        }
+    },
+    function (session, results, next) {
+        if (results.response) {
+            session.dialogData.reservation.size = results.response;
+        }
+        if (!session.dialogData.reservation.name) {
+            botbuilder.Prompts.text(session, "A quel nom est la réservation ?");
+        } else {
+            next();
+        }
+    },
+    function (session, results) {
+        if (results.response) {
+        session.dialogData.reservation.name = results.response;
+        }
+        session.endDialogWithResult({ response: session.dialogData.reservation });
+    }
+]);
