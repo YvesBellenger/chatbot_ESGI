@@ -17,72 +17,21 @@ var connector = new botbuilder.ChatConnector({
 server.post('/api/messages', connector.listen());
 
 var bot = new botbuilder.UniversalBot(connector, [
+
+    function(session){
+        session.beginDialog('reservation:hotel');
+    },
+    function(session, results){
+        session.dialogData.hotel = results.response;
+        session.send(`Votre récapitulatif: <br/> + 
+        nom : ${session.dialogData.hotel.nom}. <br/>
+        mail : ${session.dialogData.hotel.mail}. <br/>
+        age : ${session.dialogData.hotel.age}. <br/>
+        destination : ${session.dialogData.hotel.destination}. <br/>
+        checking : ${session.dialogData.hotel.checking}. <br/> 
+        nbrNuits : ${session.dialogData.hotel.nbrNuits}`);
+    }
     
-    function(session){
-        session.beginDialog('greetings'); 
-    },
-    function (session) {       
-        session.beginDialog('reservation', session.dialogData.reservation);
-    },
-    function (session, results) {
-        session.dialogData.reservation = results.response;
-        session.send(`Reservation enregistrée. <br/> Voici les détails: <br/>Date/Heure: ${session.dialogData.reservation.date} <br/>Nombre de personnes: ${session.dialogData.reservation.size} <br/>Nom: ${session.dialogData.reservation.name}`);
-    }
-    
 ]);
 
-bot.dialog('greetings', [
-    function(session){
-        session.beginDialog('askname');
-    },
-    function (session, results){
-        session.endDialog('Hello %s!', results.response);
-    }
-]);
-
-bot.dialog('askname', [
-    function(session){
-        botbuilder.Prompts.text(session, 'Hi! What is your name?');
-    },
-    function (session, results){
-        session.endDialogWithResult(results);
-    }
-]);
-
-bot.dialog('reservation', [
-
-    function (session, args, next) {
-        session.dialogData.reservation = args || {}; 
-        if (!session.dialogData.reservation.date) {
-            botbuilder.Prompts.text(session, "Veuillez renseigner la date de votre réservation (ex: 6 octobre à 18h)");
-        } else {
-            next();
-        }
-    },
-    function (session, results, next) {
-        if (results.response) {
-            session.dialogData.reservation.date = results.response;
-        }
-        if (!session.dialogData.reservation.size) {
-            botbuilder.Prompts.text(session, "Combien de personne y aura t il ?");
-        } else {
-            next();
-        }
-    },
-    function (session, results, next) {
-        if (results.response) {
-            session.dialogData.reservation.size = results.response;
-        }
-        if (!session.dialogData.reservation.name) {
-            botbuilder.Prompts.text(session, "A quel nom est la réservation ?");
-        } else {
-            next();
-        }
-    },
-    function (session, results) {
-        if (results.response) {
-        session.dialogData.reservation.name = results.response;
-        }
-        session.endDialogWithResult({ response: session.dialogData.reservation });
-    }
-]);
+bot.library(require('./dialogs/hotel'));
