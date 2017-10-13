@@ -17,7 +17,17 @@ var connector = new botbuilder.ChatConnector({
 
 server.post('/api/messages', connector.listen());
 
-var bot = new botbuilder.UniversalBot(connector);
+var bot = new botbuilder.UniversalBot(connector, [
+    
+        function(session){
+            session.beginDialog('reservation:createAlarm');
+        },
+        function(session, results){
+            session.dialogData.alarme = results.response;
+        }
 
+    ]);
+ 
 //bot.library(require('./dialogs/hotel'));
 bot.library(require('./dialogs/alarme'));
+
